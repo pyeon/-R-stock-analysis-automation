@@ -1,0 +1,44 @@
+name: Foreign Investment Analysis
+
+on:
+  schedule:
+    # 매일 오전 9시 (KST) = UTC 0시
+    - cron: '0 0 * * *'
+  workflow_dispatch:  # 수동 실행 가능
+
+permissions:
+  contents: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        pip install pykrx pandas openpyxl requests
+        
+    - name: Run Foreign Investment Analysis
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      run: |
+        python foreign_investment_analysis.py
+        
+    - name: Commit and Push Data
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add market_data/foreign_investment/*.json
+        git add market_data/foreign_investment/*.xlsx
+        git add analysis_reports/foreign_investment/*.md
+        git diff --staged --quiet || git commit -m "Update foreign investment analysis data - $(date +'%Y-%m-%d')"
+        git push
